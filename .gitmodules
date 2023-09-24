@@ -1,0 +1,6 @@
+[submodule "webui"]
+	path = webui
+	url = git@github.com:7flash/webui.git
+[submodule "deno-webui"]
+	path = deno-webui
+	url = git@github.com:7flash/deno-webui.git

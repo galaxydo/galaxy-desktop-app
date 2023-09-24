@@ -1,0 +1,3 @@
+[submodule "installer"]
+	path = installer
+	url = git@github.com:7flash/deno_modern_installer.git

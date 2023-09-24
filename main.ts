@@ -1,7 +1,7 @@
 import { fromFileUrl } from "https://deno.land/std@0.192.0/path/mod.ts";
 import { WebUI } from "./deno-webui/mod.ts";
 
-const DEBUG = true; // set to false for production
+const DEBUG = Deno.env.get("DEV");
 
 const firstWindow = new WebUI({
   'clearCache': DEBUG ? true : false,

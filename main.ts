@@ -1,11 +1,11 @@
 import { fromFileUrl } from "https://deno.land/std@0.192.0/path/mod.ts";
-import { WebUI } from "../deno-webui/mod.ts";
+import { WebUI } from "./deno-webui/mod.ts";
 
 const DEBUG = true; // set to false for production
 
 const firstWindow = new WebUI({
   'clearCache': DEBUG ? true : false,
-  'libPath': DEBUG ? '../webui/dist/webui-2.dylib' : undefined,
+  'libPath': DEBUG ? './webui/dist/webui-2.dylib' : undefined,
 });
 
 const GALAXY_PATH = `${Deno.env.get("HOME")}/.galaxy`;

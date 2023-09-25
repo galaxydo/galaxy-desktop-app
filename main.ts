@@ -101,7 +101,7 @@ async function loadFilesFromGitHubDirs(user: string, repo: string, dirList: stri
 async function fetchFilesFromGitHub() {
   console.log("Fetching files from GitHub...");
   return await loadFilesFromGitHubDirs('7flash',
-    'galaxy-assets-sep16',
+    'galaxy-dist',
     ['', 'assets', 'excalidraw-assets']);
 }
 
@@ -137,7 +137,7 @@ async function loadFilesAsync(pathList: string[]): Promise<Map<string, string>> 
   const lastDownloadDate = await getLastDownloadDate();
   let lastCommitDate;
   try {
-    lastCommitDate = await getLastCommitDate('7flash', 'galaxy-assets-sep16');
+    lastCommitDate = await getLastCommitDate('7flash', 'galaxy-dist');
   } catch (err) {
     console.log('skip', err);
   }

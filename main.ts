@@ -1,12 +1,16 @@
 import { fromFileUrl } from "https://deno.land/std@0.192.0/path/mod.ts";
 import { WebUI } from "./deno-webui/mod.ts";
 
+// import { set } from "https://deno.land/x/kv_toolbox/blob.ts";
+
 const DEBUG = Deno.env.get("DEV");
 
 const firstWindow = new WebUI({
   'clearCache': DEBUG ? true : false,
   'libPath': DEBUG ? './webui/dist/webui-2.dylib' : undefined,
 });
+
+firstWindow.setProfile('', '');
 
 const GALAXY_PATH = `${Deno.env.get("HOME")}/.galaxy`;
 const KV_PATH = `${GALAXY_PATH}/meta.json`;
@@ -150,7 +154,7 @@ async function loadFilesAsync(pathList: string[]): Promise<Map<string, string>> 
     if (DEBUG) {
       console.log("Debug mode: Loading local files only...");
       return await loadFilesAsync([
-        './dist', './dist/assets', './excalidraw-assets'
+        '../dist', '../dist/assets', '../dist/excalidraw-assets'
       ]);
     } else {
       const lastDownloadDate = await getLastDownloadDate();
@@ -185,22 +189,50 @@ async function loadFilesAsync(pathList: string[]): Promise<Map<string, string>> 
   });
 
   firstWindow.bind('executeDeno', async (inputData) => {
-    try {
-      const { code, input } = JSON.parse(inputData.data);
-      console.log('executeDeno', 'code', code);
-      console.log('executeDeno', 'input', input);
+    // Run the task in the background.
+    setTimeout(async () => {
+      const { code: rawCode, input, taskId } = JSON.parse(inputData.data);
 
-      // Construct the function to return the function secondMacro
-      let constructedFunction = new Function('return ' + code)();
+      try {
+        // Remove tabs and excessive spaces
+        const code = rawCode.replace(/\s+/g, ' ');
 
-      // Check if constructed function is indeed a function before calling
-      if (typeof constructedFunction === 'function') {
-        let result = await constructedFunction(input);
-        console.log('result', result);
-        return { success: true, data: result };
-      } else {
-        return { success: false, error: "Constructed code did not result in a function." };
+        console.log('executeDeno', 'code', code);
+        console.log('executeDeno', 'input', input);
+
+        // Construct the function to return the function from the code string
+        let constructedFunction = new Function('return ' + code)();
+
+        if (typeof constructedFunction === 'function') {
+          let result = await constructedFunction(input);
+          const denoResult = { success: true, data: result };
+          firstWindow.run(`window.ga.executeCallback('${taskId}', ${JSON.stringify(denoResult)})`);
+        } else {
+          throw 'invalid function';
+        }
+      } catch (error) {
+        const denoResult = { success: false, error: error.toString() }
+        firstWindow.run(`window.ga.executeCallback('${taskId}', ${JSON.stringify(denoResult)})`);
       }
+    }, 0);
+
+    return true;
+  });
+
+  // note, it's temporary binding until the issue resolved
+  // https://github.com/webui-dev/webui/issues/231
+  firstWindow.bind('saveScene', async (inputData) => {
+    try {
+      let { sceneName, sceneData } = JSON.parse(inputData.data);
+
+      // const kv = await Deno.openKv();
+      // const blob = new TextEncoder().encode(sceneData);
+      // await set(kv, ["layers", sceneName], blob);
+      // await kv.close();
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const blob = '';
+      return { success: true, data: `saved size ${blob.length}` };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -246,7 +278,6 @@ async function loadFilesAsync(pathList: string[]): Promise<Map<string, string>> 
 
   try {
     await firstWindow.show('./dist/index.html');
-    // await firstWindow.show((`<html>    <script src="webui.js"></script><p>It is ${new Date().toLocaleTimeString()}</p></html>`))
   } catch (err) {
     console.error('err', err);
   }

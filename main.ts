@@ -1,8 +1,6 @@
 import { fromFileUrl } from "https://deno.land/std@0.192.0/path/mod.ts";
 import { WebUI } from "./deno-webui/mod.ts";
 
-// import { set } from "https://deno.land/x/kv_toolbox/blob.ts";
-
 const DEBUG = Deno.env.get("DEV");
 
 const firstWindow = new WebUI({
@@ -63,8 +61,8 @@ async function getLastCommitDate(user: string, repo: string): Promise<Date> {
   return new Date(data.commit.committer.date);
 }
 
-async function loadFilesFromGitHubDirs(user: string, repo: string, dirList: string[]): Promise<Map<string, string>> {
-  const files = new Map<string, string>();
+async function loadFilesFromGitHubDirs(user: string, repo: string, dirList: string[]): Promise<MemoryFiles> {
+  const files = new Map();
   const baseURL = `https://api.github.com/repos/${user}/${repo}/contents/`;
 
   for (const dir of dirList) {
@@ -87,8 +85,8 @@ async function loadFilesFromGitHubDirs(user: string, repo: string, dirList: stri
         if (!fileResponse.ok) {
           throw new Error(`Failed to fetch ${content.download_url}: ${fileResponse.statusText}`);
         }
-        const fileContent = await fileResponse.text();
-        files.set(content.name, fileContent);
+        const fileContent = await fileResponse.arrayBuffer(); //.text();
+        files.set(content.name, new Uint8Array(fileContent));
       }
     });
 
@@ -105,26 +103,30 @@ async function fetchFilesFromGitHub() {
     ['', 'assets', 'excalidraw-assets']);
 }
 
-async function saveFilesToLocal(files: Map<string, string>) {
+type MemoryFiles =
+  Map<string, Uint8Array>;
+
+async function saveFilesToLocal(files: MemoryFiles) {
   await ensureGalaxyDirectory();
   for (const [filename, content] of files.entries()) {
-    await Deno.writeTextFile(`${GALAXY_PATH}/${filename}`, content);
+    await Deno.writeFile(`${GALAXY_PATH}/${filename}`, content);
   }
   console.log(`Saved ${files.size} files to ${GALAXY_PATH}`);
 }
 
 // --- File handling functions ---
-async function loadFilesFromLocalDirectory(): Promise<Map<string, string>> {
+async function loadFilesFromLocalDirectory(): Promise<MemoryFiles> {
   console.log("Loading files from local directory...");
   return await loadFilesAsync([GALAXY_PATH]);
 }
 
-async function loadFilesAsync(pathList: string[]): Promise<Map<string, string>> {
-  const files = new Map<string, string>();
+async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
+  const files = new Map();
   for (const path of pathList) {
     for await (const entry of Deno.readDir(path)) {
       if (entry.isFile) {
-        const fileContent = await Deno.readTextFile(`${path}/${entry.name}`);
+        const fileContent = await Deno.readFile(`${path}/${entry.name}`);
+        console.log(entry.name, fileContent.length);
         files.set(entry.name, fileContent);
       }
     }
@@ -150,7 +152,7 @@ async function loadFilesAsync(pathList: string[]): Promise<Map<string, string>> 
     await storeMetaData(currentDate);
   }
 
-  async function getFiles(): Promise<Map<string, string>> {
+  async function getFiles(): Promise<Map<string, Uint8Array>> {
     if (DEBUG) {
       console.log("Debug mode: Loading local files only...");
       return await loadFilesAsync([
@@ -160,7 +162,7 @@ async function loadFilesAsync(pathList: string[]): Promise<Map<string, string>> 
       const lastDownloadDate = await getLastDownloadDate();
       let lastCommitDate;
       try {
-        lastCommitDate = await getLastCommitDate('7flash', 'galaxy-assets-sep16');
+        lastCommitDate = await getLastCommitDate('7flash', 'galaxy-dist');
       } catch (err) {
         console.error('skip update', err);
       }
@@ -179,8 +181,13 @@ async function loadFilesAsync(pathList: string[]): Promise<Map<string, string>> 
   console.log(`Loaded ${files.size} files.`);
 
   firstWindow.setFileHandler(({ pathname }) => {
+    if (pathname.startsWith("/public")) {
+      pathname = pathname.replace("/public", "");
+    }
+
     const filename = pathname.substring(pathname.lastIndexOf('/') + 1);
     if (files.has(filename)) {
+      console.log('has ', filename, files.get(filename).length);
       return files.get(filename);
     } else {
       console.error(`Unknown file request: ${filename}`);

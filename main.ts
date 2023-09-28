@@ -1,5 +1,5 @@
-import { fromFileUrl } from "https://deno.land/std@0.192.0/path/mod.ts";
 import { WebUI } from "./deno-webui/mod.ts";
+import { dynamicImport, importString } from './dynamic-import/mod.ts';
 
 const DEBUG = Deno.env.get("DEV");
 
@@ -194,38 +194,49 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
       throw 'Unknown file ' + filename;
     }
   });
-
   firstWindow.bind('executeDeno', async (inputData) => {
-    // Run the task in the background.
+    // Defer the task execution to allow the binding to return immediately.
     setTimeout(async () => {
-      const { code: rawCode, input, taskId } = JSON.parse(inputData.data);
+      let { code: rawCode, input, taskId } = JSON.parse(inputData.data);
 
       try {
-        // Remove tabs and excessive spaces
-        const code = rawCode.replace(/\s+/g, ' ');
-
-        console.log('executeDeno', 'code', code);
-        console.log('executeDeno', 'input', input);
-
-        // Construct the function to return the function from the code string
-        let constructedFunction = new Function('return ' + code)();
-
-        if (typeof constructedFunction === 'function') {
-          let result = await constructedFunction(input);
-          const denoResult = { success: true, data: result };
-          firstWindow.run(`window.ga.executeCallback('${taskId}', ${JSON.stringify(denoResult)})`);
-        } else {
-          throw 'invalid function';
+        // Extract function details from the rawCode
+        const functionNameMatch = rawCode.match(/(async\s*)?function (\w+)/);
+        if (!functionNameMatch) {
+          throw new Error('Invalid function format in rawCode.');
         }
+        const asyncKeyword = functionNameMatch[1] || '';
+        const functionName = functionNameMatch[2];
+
+        rawCode = rawCode.replace(/\s+/g, ' ');
+        // Modify rawCode
+        rawCode = rawCode.replace(/(async\s*)?function \w+/, `${asyncKeyword}function ${functionName}`);
+        rawCode = `export default ${rawCode}`;
+        rawCode = rawCode.replace(/import\(/g, 'dynamicImport(');
+
+        console.log('rawCode', rawCode);
+
+        // Use importString to get the module, passing dynamicImport as a parameter
+        const { default: fn } = await importString(rawCode, { parameters: {
+          dynamicImport: (moduleName) => dynamicImport(moduleName, {
+            force: true,
+          }),
+          input
+        } });
+
+        const result = await fn();
+        const denoResult = { success: true, data: result };
+
+        firstWindow.run(`window.ga.executeCallback('${taskId}', ${JSON.stringify(denoResult)})`);
       } catch (error) {
-        const denoResult = { success: false, error: error.toString() }
+        const denoResult = { success: false, error: error.toString() };
         firstWindow.run(`window.ga.executeCallback('${taskId}', ${JSON.stringify(denoResult)})`);
       }
     }, 0);
 
+    // Return true to indicate the task has been scheduled.
     return true;
   });
-
   // note, it's temporary binding until the issue resolved
   // https://github.com/webui-dev/webui/issues/231
   firstWindow.bind('saveScene', async (inputData) => {

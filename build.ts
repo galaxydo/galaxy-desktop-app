@@ -5,7 +5,7 @@ const installer = new Installer({
   src_path: `${Deno.cwd()}/GalaxyBrowser`,
   package: {
     product_name: "Galaxy Browser",
-    version: "1.1.0",
+    version: "1.1.1",
     description: "Knowledge Management System meets web4 browser on the infinite canvas",
     homepage: "https://github.com/7flash/galaxy-polkadot",
     authors: ["7flash"],

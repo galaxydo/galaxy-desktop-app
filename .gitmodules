@@ -7,3 +7,6 @@
 [submodule "deno-webui"]
 	path = deno-webui
 	url = git@github.com:7flash/deno-webui.git
+[submodule "dynamic-import"]
+	path = dynamic-import
+	url = git@github.com:7flash/import.git

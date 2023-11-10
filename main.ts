@@ -194,8 +194,17 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
       throw 'Unknown file ' + filename;
     }
   });
-  firstWindow.bind('executeDeno', async (inputData) => {
+  firstWindow.bind('executeDeno', async ({ event_number }) => {
     // Defer the task execution to allow the binding to return immediately.
+
+    const response = await firstWindow.script(`return JSON.stringify(window.inputData[${event_number}])`).catch(console.error)
+
+    const inputData = {
+      data: response,
+    }
+
+    // console.log(JSON.stringify(inputData));
+
     setTimeout(async () => {
       let { code: rawCode, input, taskId } = JSON.parse(inputData.data);
 
@@ -217,12 +226,14 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
         console.log('rawCode', rawCode);
 
         // Use importString to get the module, passing dynamicImport as a parameter
-        const { default: fn } = await importString(rawCode, { parameters: {
-          dynamicImport: (moduleName) => dynamicImport(moduleName, {
-            force: true,
-          }),
-          input
-        } });
+        const { default: fn } = await importString(rawCode, {
+          parameters: {
+            dynamicImport: (moduleName) => dynamicImport(moduleName, {
+              force: true,
+            }),
+            input
+          }
+        });
 
         const result = await fn();
         const denoResult = { success: true, data: result };
@@ -243,14 +254,18 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
     try {
       let { sceneName, sceneData } = JSON.parse(inputData.data);
 
-      // const kv = await Deno.openKv();
-      // const blob = new TextEncoder().encode(sceneData);
-      // await set(kv, ["layers", sceneName], blob);
+      console.log(sceneName, sceneData);
+
+      const kvBlob = await import('https://deno.land/x/kv_toolbox@0.0.4/blob.ts');
+
+      const kv = await Deno.openKv();
+      const blob = new TextEncoder().encode(sceneData);
+      // await kvBlob.set(kv, ["layers", sceneName], blob);
       // await kv.close();
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const blob = '';
-      return { success: true, data: `saved size ${blob.length}` };
+      // await new Promise(resolve => setTimeout(resolve, 1000));
+      // const blob = '';
+      return { success: true, } // data: `saved size ${blob.length}` };
     } catch (error) {
       return { success: false, error: error.message };
     }

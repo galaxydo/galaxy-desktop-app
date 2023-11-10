@@ -197,51 +197,57 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
   firstWindow.bind('executeDeno', async ({ event_number }) => {
     // Defer the task execution to allow the binding to return immediately.
 
-    const response = await firstWindow.script(`return JSON.stringify(window.inputData[${event_number}])`).catch(console.error)
-
-    const inputData = {
-      data: response,
-    }
-
     // console.log(JSON.stringify(inputData));
 
     setTimeout(async () => {
-      let { code: rawCode, input, taskId } = JSON.parse(inputData.data);
-
       try {
-        // Extract function details from the rawCode
-        const functionNameMatch = rawCode.match(/(async\s*)?function (\w+)/);
-        if (!functionNameMatch) {
-          throw new Error('Invalid function format in rawCode.');
+
+        const response = await firstWindow.script(`return JSON.stringify(window.inputData[${event_number}])`).catch(console.error)
+
+        const inputData = {
+          data: response,
         }
-        const asyncKeyword = functionNameMatch[1] || '';
-        const functionName = functionNameMatch[2];
 
-        rawCode = rawCode.replace(/\s+/g, ' ');
-        // Modify rawCode
-        rawCode = rawCode.replace(/(async\s*)?function \w+/, `${asyncKeyword}function ${functionName}`);
-        rawCode = `export default ${rawCode}`;
-        rawCode = rawCode.replace(/import\(/g, 'dynamicImport(');
+        let { code: rawCode, input, taskId } = JSON.parse(inputData.data);
 
-        console.log('rawCode', rawCode);
-
-        // Use importString to get the module, passing dynamicImport as a parameter
-        const { default: fn } = await importString(rawCode, {
-          parameters: {
-            dynamicImport: (moduleName) => dynamicImport(moduleName, {
-              force: true,
-            }),
-            input
+        try {
+          // Extract function details from the rawCode
+          const functionNameMatch = rawCode.match(/(async\s*)?function (\w+)/);
+          if (!functionNameMatch) {
+            throw new Error('Invalid function format in rawCode.');
           }
-        });
+          const asyncKeyword = functionNameMatch[1] || '';
+          const functionName = functionNameMatch[2];
 
-        const result = await fn();
-        const denoResult = { success: true, data: result };
+          rawCode = rawCode.replace(/\s+/g, ' ');
+          // Modify rawCode
+          rawCode = rawCode.replace(/(async\s*)?function \w+/, `${asyncKeyword}function ${functionName}`);
+          rawCode = `export default ${rawCode}`;
+          rawCode = rawCode.replace(/import\(/g, 'dynamicImport(');
 
-        firstWindow.run(`window.ga.executeCallback('${taskId}', ${JSON.stringify(denoResult)})`);
-      } catch (error) {
-        const denoResult = { success: false, error: error.toString() };
-        firstWindow.run(`window.ga.executeCallback('${taskId}', ${JSON.stringify(denoResult)})`);
+          console.log('rawCode', rawCode);
+
+          // Use importString to get the module, passing dynamicImport as a parameter
+          const { default: fn } = await importString(rawCode, {
+            parameters: {
+              dynamicImport: (moduleName) => dynamicImport(moduleName, {
+                force: true,
+              }),
+              input
+            }
+          });
+
+          const result = await fn();
+          const denoResult = { success: true, data: result };
+
+          firstWindow.run(`window.ga.executeCallback('${taskId}', ${JSON.stringify(denoResult)})`);
+        } catch (error) {
+          const denoResult = { success: false, error: error.toString() };
+          firstWindow.run(`window.ga.executeCallback('${taskId}', ${JSON.stringify(denoResult)})`);
+        }
+      } catch (err) {
+        console.error(err);
+        firstWindow.run(`ea.setToast("${err.toString()}")`)
       }
     }, 0);
 

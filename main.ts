@@ -194,22 +194,31 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
       throw 'Unknown file ' + filename;
     }
   });
-  firstWindow.bind('executeDeno', async ({ event_number }) => {
+  firstWindow.bind('executeDeno', async (e: WebUI.Event) => {
     // Defer the task execution to allow the binding to return immediately.
+
+
+
+    // console.log('executeDeno', event_number);
+
+    // event_number = 0;
 
     // console.log(JSON.stringify(inputData));
 
     setTimeout(async () => {
       try {
+        // const response = await firstWindow.script(`return JSON.stringify(window.inputData[${event_number}])`).catch(console.error)
 
-        const response = await firstWindow.script(`return JSON.stringify(window.inputData[${event_number}])`).catch(console.error)
+        // const inputData = {
+        //   data: response,
+        // }
 
-        const inputData = {
-          data: response,
-        }
-
-        let { code: rawCode, input, taskId } = JSON.parse(inputData.data);
-
+        let rawCode = e.arg.string(0);
+        console.log('rawCode ', rawCode );
+        const input = e.arg.string(1);
+        console.log('input ', input );
+        const taskId = e.arg.number(2);
+console.log('taskId ', taskId );
         try {
           // Extract function details from the rawCode
           const functionNameMatch = rawCode.match(/(async\s*)?function (\w+)/);
@@ -233,7 +242,9 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
               dynamicImport: (moduleName) => dynamicImport(moduleName, {
                 force: true,
               }),
-              input
+              input,
+              firstWindow,
+              galaxyPath: GALAXY_PATH,
             }
           });
 
@@ -242,12 +253,15 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
 
           firstWindow.run(`window.ga.executeCallback('${taskId}', ${JSON.stringify(denoResult)})`);
         } catch (error) {
+          console.error(error);
+          firstWindow.run(`ea.setToast({ message: "${error.toString()}" })`)
+
           const denoResult = { success: false, error: error.toString() };
           firstWindow.run(`window.ga.executeCallback('${taskId}', ${JSON.stringify(denoResult)})`);
         }
       } catch (err) {
         console.error(err);
-        firstWindow.run(`ea.setToast("${err.toString()}")`)
+        firstWindow.run(`ea.setToast({ message: "${err.toString()}" })`)
       }
     }, 0);
 

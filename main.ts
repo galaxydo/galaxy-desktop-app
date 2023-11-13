@@ -1,9 +1,10 @@
 import { WebUI } from "./deno-webui/mod.ts";
 import { dynamicImport, importString } from './dynamic-import/mod.ts';
 import { encodeHex } from "https://deno.land/std@0.202.0/encoding/hex.ts";
-import { decodeBase64Url } from "https://deno.land/std@0.206.0/encoding/base64url.ts";
+import { decodeBase64, encodeBase64 } from "https://deno.land/std@0.206.0/encoding/base64.ts";
 
 const DEBUG = Deno.env.get("DEV");
+const OPENAI_KEY = Deno.env.get("OPENAI_KEY");
 
 const firstWindow = new WebUI({
   'clearCache': DEBUG ? true : false,
@@ -255,7 +256,10 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
           firstWindow,
           galaxyPath: GALAXY_PATH,
           modules: {},
-          decodeBase64Url,
+          decodeBase64,
+          encodeBase64,
+          apiKey: OPENAI_KEY,
+          encodeHex,
         }
       });
 
@@ -264,8 +268,14 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
       console.log("result executeDeno", result);
 
       const response = { result };
+      const serializedResponse = JSON.stringify(response)
+        .replace(/\\/g, '\\\\') // Escape backslashes
+        .replace(/'/g, "\\'")   // Escape single quotes
+        .replace(/"/g, '\\"')   // Escape double quotes
+        .replace(/`/g, '\\`')   // Escape backticks
+        .replace(/\$/g, '\\$'); // Escape dollar signs (for template literals)
 
-      await firstWindow.script(`return window.webuiCallbacks["${taskId}"]('${JSON.stringify(response)}')`);
+      await firstWindow.script(`return window.webuiCallbacks["${taskId}"]('${serializedResponse}')`);
     } catch (err) {
       console.error('executeDeno error', err);
       firstWindow.run(`ea.setToast({ message: "${err.toString()}" })`);

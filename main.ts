@@ -194,6 +194,77 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
       return files.get(filename);
     } else {
       console.error(`Unknown file request: ${filename}`);
+      if (filename.endsWith('.jpg') || filename.endsWith('.png')) {
+const engineId = 'stable-diffusion-512-v2-1'
+const apiHost = Deno.env.get('API_HOST') ?? 'https://api.stability.ai'
+const apiKey = Deno.env.get('STABILITY_API_KEY')
+
+if (!apiKey) throw new Error('Missing Stability API key.')
+
+async function anit() {
+const response = await fetch(
+  `${apiHost}/v1/generation/${engineId}/text-to-image`,
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      text_prompts: [
+        {
+          text: `An image on website with name "${filename}"`,
+        },
+      ],
+      cfg_scale: 7,
+      height: 512,
+      width: 512,
+      steps: 30,
+      samples: 1,
+    }),
+  }
+)
+
+if (!response.ok) {
+  throw new Error(`Non-200 response: ${await response.text()}`)
+}
+
+interface GenerationResponse {
+  artifacts: Array<{
+    base64: string
+    seed: number
+    finishReason: string
+  }>
+}
+
+const responseJSON = (await response.json()) as GenerationResponse
+
+responseJSON.artifacts.forEach((image, index) => {
+  // Deno.writeTextFile(filename, image.base64);
+            // fs.writeFileSync(
+  //   `./out/v1_txt2img_${index}.png`,
+  //   Buffer.from(image.base64, 'base64')
+  // )
+// Convert Base64 string to a Buffer
+// console.log('image', image.base64);
+            
+            // const buffer = Deno.Buffer.from(image.base64, 'base64');
+
+// Convert the Buffer to Uint8Array
+// const uint8Array = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.length);
+// console.log(image.base64.substr(0, 10));
+const manit = decodeBase64(image.base64)
+
+          // const mit = Buffer.from(image.base64, 'base64');
+          files.set(filename, manit);
+
+            console.log('generated ' + filename);
+})
+        }
+        anit().then(console.log).catch(console.error);
+
+      }
       throw 'Unknown file ' + filename;
     }
   });

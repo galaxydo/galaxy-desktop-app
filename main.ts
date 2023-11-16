@@ -295,12 +295,13 @@ const manit = decodeBase64(image.base64)
     }
   });
 
-  firstWindow.bind('executeDeno', async (e: WebUI.Event) => {
-    try {
+  firstWindow.bind('executeDeno', (e: WebUI.Event) => {
+    async function nov16() {
+      try {
       let rawCode = e.arg.string(0);
-      console.log('rawCode ', rawCode);
+      // console.log('rawCode ', rawCode);
       const input = e.arg.string(1);
-      console.log('input ', input);
+      // console.log('input ', input);
       const taskId = e.arg.string(2);
       console.log('taskId ', taskId);
       // Extract function details from the rawCode
@@ -336,7 +337,7 @@ const manit = decodeBase64(image.base64)
 
       const result = await fn();
 
-      console.log("result executeDeno", result);
+      // console.log("result executeDeno", result);
 
       const response = { result };
       const serializedResponse = JSON.stringify(response)
@@ -346,11 +347,14 @@ const manit = decodeBase64(image.base64)
         .replace(/`/g, '\\`')   // Escape backticks
         .replace(/\$/g, '\\$'); // Escape dollar signs (for template literals)
 
-      await firstWindow.script(`return window.webuiCallbacks["${taskId}"]('${serializedResponse}')`);
+      await firstWindow.run(`return window.webuiCallbacks["${taskId}"]('${serializedResponse}')`);
     } catch (err) {
       console.error('executeDeno error', err);
       firstWindow.run(`ea.setToast({ message: "${err.toString()}" })`);
+    }    
     }
+    nov16().catch(console.error);
+    return 'ok';
   });
 
   // note, it's temporary binding until the issue resolved
@@ -359,7 +363,7 @@ const manit = decodeBase64(image.base64)
     try {
       let { sceneName, sceneData } = JSON.parse(inputData.data);
 
-      console.log(sceneName, sceneData);
+      // console.log(sceneName, sceneData);
 
       const kvBlob = await import('https://deno.land/x/kv_toolbox@0.0.4/blob.ts');
 

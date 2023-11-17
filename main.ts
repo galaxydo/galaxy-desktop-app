@@ -195,7 +195,7 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
     } else {
       console.error(`Unknown file request: ${filename}`);
       if (filename.endsWith('.jpg') || filename.endsWith('.png')) {
-const engineId = 'stable-diffusion-512-v2-1'
+const engineId = 'stable-diffusion-xl-1024-v1-0'
 const apiHost = Deno.env.get('API_HOST') ?? 'https://api.stability.ai'
 const apiKey = Deno.env.get('STABILITY_API_KEY')
 
@@ -218,8 +218,8 @@ const response = await fetch(
         },
       ],
       cfg_scale: 7,
-      height: 512,
-      width: 512,
+      height: 1024,
+      width: 1024,
       steps: 30,
       samples: 1,
     }),

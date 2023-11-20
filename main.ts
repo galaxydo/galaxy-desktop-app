@@ -195,72 +195,72 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
     } else {
       console.error(`Unknown file request: ${filename}`);
       if (filename.endsWith('.jpg') || filename.endsWith('.png')) {
-const engineId = 'stable-diffusion-xl-1024-v1-0'
-const apiHost = Deno.env.get('API_HOST') ?? 'https://api.stability.ai'
-const apiKey = Deno.env.get('STABILITY_API_KEY')
+        const engineId = 'stable-diffusion-xl-1024-v1-0'
+        const apiHost = Deno.env.get('API_HOST') ?? 'https://api.stability.ai'
+        const apiKey = Deno.env.get('STABILITY_API_KEY')
 
-if (!apiKey) throw new Error('Missing Stability API key.')
+        if (!apiKey) throw new Error('Missing Stability API key.')
 
-async function anit() {
-const response = await fetch(
-  `${apiHost}/v1/generation/${engineId}/text-to-image`,
-  {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      text_prompts: [
-        {
-          text: `An image on website with name "${filename}"`,
-        },
-      ],
-      cfg_scale: 7,
-      height: 1024,
-      width: 1024,
-      steps: 30,
-      samples: 1,
-    }),
-  }
-)
+        async function anit() {
+          const response = await fetch(
+            `${apiHost}/v1/generation/${engineId}/text-to-image`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                Authorization: `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify({
+                text_prompts: [
+                  {
+                    text: `An image on website with name "${filename}"`,
+                  },
+                ],
+                cfg_scale: 7,
+                height: 1024,
+                width: 1024,
+                steps: 30,
+                samples: 1,
+              }),
+            }
+          )
 
-if (!response.ok) {
-  throw new Error(`Non-200 response: ${await response.text()}`)
-}
+          if (!response.ok) {
+            throw new Error(`Non-200 response: ${await response.text()}`)
+          }
 
-interface GenerationResponse {
-  artifacts: Array<{
-    base64: string
-    seed: number
-    finishReason: string
-  }>
-}
+          interface GenerationResponse {
+            artifacts: Array<{
+              base64: string
+              seed: number
+              finishReason: string
+            }>
+          }
 
-const responseJSON = (await response.json()) as GenerationResponse
+          const responseJSON = (await response.json()) as GenerationResponse
 
-responseJSON.artifacts.forEach((image, index) => {
-  // Deno.writeTextFile(filename, image.base64);
+          responseJSON.artifacts.forEach((image, index) => {
+            // Deno.writeTextFile(filename, image.base64);
             // fs.writeFileSync(
-  //   `./out/v1_txt2img_${index}.png`,
-  //   Buffer.from(image.base64, 'base64')
-  // )
-// Convert Base64 string to a Buffer
-// console.log('image', image.base64);
-            
+            //   `./out/v1_txt2img_${index}.png`,
+            //   Buffer.from(image.base64, 'base64')
+            // )
+            // Convert Base64 string to a Buffer
+            // console.log('image', image.base64);
+
             // const buffer = Deno.Buffer.from(image.base64, 'base64');
 
-// Convert the Buffer to Uint8Array
-// const uint8Array = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.length);
-// console.log(image.base64.substr(0, 10));
-const manit = decodeBase64(image.base64)
+            // Convert the Buffer to Uint8Array
+            // const uint8Array = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.length);
+            // console.log(image.base64.substr(0, 10));
+            const manit = decodeBase64(image.base64)
 
-          // const mit = Buffer.from(image.base64, 'base64');
-          files.set(filename, manit);
+            // const mit = Buffer.from(image.base64, 'base64');
+            files.set(filename, manit);
 
             console.log('generated ' + filename);
-})
+          })
         }
         anit().then(console.log).catch(console.error);
 
@@ -298,60 +298,62 @@ const manit = decodeBase64(image.base64)
   firstWindow.bind('executeDeno', (e: WebUI.Event) => {
     async function nov16() {
       try {
-      let rawCode = e.arg.string(0);
-      // console.log('rawCode ', rawCode);
-      const input = e.arg.string(1);
-      // console.log('input ', input);
-      const taskId = e.arg.string(2);
-      console.log('taskId ', taskId);
-      // Extract function details from the rawCode
-      const functionNameMatch = rawCode.match(/(async\s*)?function (\w+)/);
-      if (!functionNameMatch) {
-        throw new Error('Invalid function format in rawCode.');
-      }
-      const asyncKeyword = functionNameMatch[1] || '';
-      const functionName = functionNameMatch[2];
-
-      rawCode = rawCode.replace(/\s+/g, ' ');
-      // Modify rawCode
-      rawCode = rawCode.replace(/(async\s*)?function \w+/, `${asyncKeyword}function ${functionName}`);
-      rawCode = `export default ${rawCode}`;
-      rawCode = rawCode.replace(/import\(/g, 'dynamicImport(');
-
-      // Use importString to get the module, passing dynamicImport as a parameter
-      const { default: fn } = await importString(rawCode, {
-        parameters: {
-          dynamicImport: (moduleName) => dynamicImport(moduleName, {
-            force: true,
-          }),
-          input: JSON.parse(input),
-          firstWindow,
-          galaxyPath: GALAXY_PATH,
-          modules: {},
-          decodeBase64,
-          encodeBase64,
-          apiKey: OPENAI_KEY,
-          encodeHex,
+        let rawCode = e.arg.string(0);
+        // console.log('rawCode ', rawCode);
+        const input = e.arg.string(1);
+        // console.log('input ', input);
+        const taskId = e.arg.string(2);
+        console.log('taskId ', taskId);
+        // Extract function details from the rawCode
+        const functionNameMatch = rawCode.match(/(async\s*)?function (\w+)/);
+        if (!functionNameMatch) {
+          throw new Error('Invalid function format in rawCode.');
         }
-      });
+        const asyncKeyword = functionNameMatch[1] || '';
+        const functionName = functionNameMatch[2];
 
-      const result = await fn();
+        rawCode = rawCode.replace(/\s+/g, ' ');
+        // Modify rawCode
+        rawCode = rawCode.replace(/(async\s*)?function \w+/, `${asyncKeyword}function ${functionName}`);
+        rawCode = `export default ${rawCode}`;
+        rawCode = rawCode.replace(/import\(/g, 'dynamicImport(');
 
-      // console.log("result executeDeno", result);
+        // Use importString to get the module, passing dynamicImport as a parameter
+        const { default: fn } = await importString(rawCode, {
+          parameters: {
+            dynamicImport: (moduleName) => dynamicImport(moduleName, {
+              force: true,
+            }),
+            input: JSON.parse(input),
+            firstWindow,
+            galaxyPath: GALAXY_PATH,
+            modules: {},
+            decodeBase64,
+            encodeBase64,
+            apiKey: OPENAI_KEY,
+            encodeHex,
+          }
+        });
 
-      const response = { result };
-      const serializedResponse = JSON.stringify(response)
-        .replace(/\\/g, '\\\\') // Escape backslashes
-        .replace(/'/g, "\\'")   // Escape single quotes
-        .replace(/"/g, '\\"')   // Escape double quotes
-        .replace(/`/g, '\\`')   // Escape backticks
-        .replace(/\$/g, '\\$'); // Escape dollar signs (for template literals)
+        console.log('begin execution', new Date())
+        const result = await fn();
+        console.log('completed execution', new Date());
 
-      await firstWindow.run(`return window.webuiCallbacks["${taskId}"]('${serializedResponse}')`);
-    } catch (err) {
-      console.error('executeDeno error', err);
-      firstWindow.run(`ea.setToast({ message: "${err.toString()}" })`);
-    }    
+        // console.log("result executeDeno", result);
+
+        const response = { result };
+        const serializedResponse = JSON.stringify(response)
+          .replace(/\\/g, '\\\\') // Escape backslashes
+          .replace(/'/g, "\\'")   // Escape single quotes
+          .replace(/"/g, '\\"')   // Escape double quotes
+          .replace(/`/g, '\\`')   // Escape backticks
+          .replace(/\$/g, '\\$'); // Escape dollar signs (for template literals)
+
+        await firstWindow.run(`return window.webuiCallbacks["${taskId}"]('${serializedResponse}')`);
+      } catch (err) {
+        console.error('executeDeno error', err);
+        firstWindow.run(`ea.setToast({ message: "${err.toString()}" })`);
+      }
     }
     nov16().catch(console.error);
     return 'ok';
@@ -420,11 +422,129 @@ const manit = decodeBase64(image.base64)
 
   try {
     await firstWindow.show('./dist/index.html');
+
+    await firstWindow.script(`
+async function waitForIt(selector) {
+  while (true) {
+    const it = document.querySelector(selector);
+    if (it) {
+        return it;
+    } else {
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+}
+
+async function doIt() {
+while (!window.ea) {
+          await new Promise(resolve => setTimeout(resolve, 500));  
+      }
+      
+      ea.updateScene({
+    elements: [{...window.convertToExcalidrawElements([{ type: 'frame', name: 'now', x: 0, y: 0, width: 100, height: 100 }])[0], customData: { macros: { save: true, open: true, publish: true } }}]
+})
+
+ea.updateScene({ appState: { selectedElementIds: {[ea.getSceneElements()[0].id]: true} } })
+
+await waitForIt('[data-testid="macro-button-open"]').then(it => it.click())
+
+await waitForIt('[data-testid="modal-input"]').then(it => {
+      it.value = 'now';
+       it.dispatchEvent(new Event('change', { bubbles: true }));
+})
+
+await waitForIt('[data-testid="modal-button"]').then(it => it.click())
+
+ea.scrollToContent();
+}
+
+doIt();
+      `)
   } catch (err) {
     console.error('err', err);
   }
 
   console.assert(firstWindow.isShown, true)
+
+  let mux = false;
+
+  async function saveScene(sceneName) {
+    if (mux) return;
+    mux = true;
+    try {
+      //       const globalFrame = JSON.parse(await firstWindow.script(`return window.convertToExcalidrawElements([{ type: 'frame' }])[0]`));
+      // await firstWindow.script(
+      //         `ea.updateScene({ elements: [
+      //     ...ea.getSceneElements().filter(it => it.id && it.id != globalFrame.id).map(it => {
+      //         it.frameId = '${globalFrame.id}';
+      //         return it;
+      //     }), ${JSON.stringify(globalFrame)}]
+      // })`
+      //       )
+      //       await firstWindow.script(`const globalFrame = ${JSON.stringify(globalFrame)};
+      //         return ga.executeMacro('save', globalFrame, globalFrame)`)
+      let bufferSize = await firstWindow.script('return JSON.stringify(window.ea.getSceneElements()).length.toString();');
+      bufferSize *= 4;
+      bufferSize += 4;
+      const els = JSON.parse(await firstWindow.script(`return JSON.stringify(window.ea.getSceneElements());`, { bufferSize: Number.parseInt(bufferSize) + 1 }));
+      const encoder = new TextEncoder();
+
+      const fileIds = [...new Set(els.filter(function(it) { return it.type === 'image'; }).map(function(it) { return it.fileId; }))];
+
+      for (var i = 0; i < fileIds.length; i++) {
+        var fileId = fileIds[i];
+        let existingOne = false;
+        try {
+          await Deno.stat(GALAXY_PATH + '/' + fileId + '.png');
+          existingOne = true;
+        } catch (_) { }
+        if (existingOne) continue;
+        try {
+          let bufferSize = await firstWindow.script('return window.ea.getFiles()["' + fileId + '"].dataURL.length;');
+          bufferSize *= 4;
+          bufferSize += 4;
+
+          var fileDataURL = await firstWindow.script('return window.ea.getFiles()["' + fileId + '"].dataURL;', { bufferSize: Number.parseInt(bufferSize) + 1 });
+
+          var base64Index = fileDataURL.indexOf(';base64,');
+          if (base64Index === -1) {
+            throw new Error('Base64 data not found in data URL');
+          }
+          var base64Data = fileDataURL.substring(base64Index + 8);
+
+          var decodedData = decodeBase64(base64Data);
+
+          var fileType = fileDataURL.substring(11, base64Index);
+
+          await Deno.writeFile(GALAXY_PATH + '/' + fileId + '.' + fileType, decodedData);
+
+          console.log('auto save', fileId);
+        } catch (error) {
+          console.error('Error saving image with fileId:', fileId, error);
+        }
+      }
+
+      var sceneData = JSON.stringify({ elements: els.filter(it => it.name != 'now') }, null, 2);
+      await Deno.writeTextFile(GALAXY_PATH + '/' + sceneName + '.json', sceneData);
+    } catch (err) {
+      console.error('saveScene', err);
+    }
+    mux = false;
+  }
+
+  function decodeBase64(base64) {
+    const binaryString = window.atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  setInterval(() => {
+    saveScene('now')
+      .catch(console.error);
+  }, 60 * 1000);
 
   await WebUI.wait();
 })();

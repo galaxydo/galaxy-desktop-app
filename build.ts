@@ -2,12 +2,15 @@ import { Installer } from "./installer/mod.ts";
 
 const binaryName = `${Deno.env.get("BINARY_NAME")}`;
 
+const version = await Deno.readTextFile('.version');
+console.log('version', version, binaryName);
+
 const installer = new Installer({
   out_path: `${Deno.cwd()}/bundle/${binaryName}`,
   src_path: `${Deno.cwd()}/bin/${binaryName}`,
   package: {
     product_name: "Galaxy Browser",
-    version: "1.3.0-nov16",
+    version,
     description: "Knowledge Management System meets web4 browser on the infinite canvas",
     homepage: "https://github.com/7flash/galaxy-polkadot",
     authors: ["7flash"],

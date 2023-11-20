@@ -11,6 +11,12 @@ const firstWindow = new WebUI({
   'libPath': DEBUG ? './webui/dist/webui-2.dylib' : undefined,
 });
 
+// const secondWindow = new WebUI({
+
+// })
+
+// secondWindow.showBrowser.show('<html>second</html>');
+
 firstWindow.setProfile('', '');
 
 const GALAXY_PATH = `${Deno.env.get("HOME")}/.galaxy`;

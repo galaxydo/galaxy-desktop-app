@@ -148,11 +148,11 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
   const lastDownloadDate = await getLastDownloadDate();
   let lastCommitDate;
   try {
-    lastCommitDate = await getLastCommitDate('7flash', 'galaxy-dist');
+    if (DEBUG) lastCommitDate = 0;
+    else lastCommitDate = await getLastCommitDate('7flash', 'galaxy-dist');
   } catch (err) {
     console.log('skip', err);
   }
-
 
   if (!lastDownloadDate || lastCommitDate > lastDownloadDate) {
     const filesFromGitHub = await fetchFilesFromGitHub();
@@ -429,6 +429,8 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
   try {
     await firstWindow.show('./dist/index.html');
 
+    // TODO: load macros from macros folder & register each as deno macro with window.ga.addMacro wrapped into defaultDenoMacro
+
     await firstWindow.script(`
 async function waitForIt(selector) {
   while (true) {
@@ -466,6 +468,23 @@ ea.scrollToContent();
 
 doIt();
       `)
+
+    setInterval(() => {
+      console.log("firstWindow isShown", firstWindow.isShown);
+      if (!firstWindow.isShown) {
+        // firstWindow.clean();
+        firstWindow.close();
+        firstWindow.show('./dist/index.html');
+      }
+    }, 5000);
+
+    Deno.addSignalListener(
+      "SIGTERM",
+      () => {
+        firstWindow.close();
+      }
+    );
+
   } catch (err) {
     console.error('err', err);
   }
@@ -506,7 +525,7 @@ doIt();
         } catch (_) { }
         if (existingOne) continue;
         try {
-          let bufferSize = await firstWindow.script('return window.ea.getFiles()["' + fileId + '"].dataURL.length;');
+          let bufferSize = await firstWindow.script('return window.ea.getFiles()["' + fileId + '"].dataURL.length.toString();');
           bufferSize *= 4;
           bufferSize += 4;
 
@@ -544,7 +563,7 @@ doIt();
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i);
     }
-    return bytes.buffer;
+    return bytes;
   }
 
   setInterval(() => {

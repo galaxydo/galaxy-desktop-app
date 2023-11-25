@@ -3,6 +3,10 @@ import { dynamicImport, importString } from './dynamic-import/mod.ts';
 import { encodeHex } from "https://deno.land/std@0.202.0/encoding/hex.ts";
 import { decodeBase64, encodeBase64 } from "https://deno.land/std@0.206.0/encoding/base64.ts";
 
+setInterval(() => {
+  console.log(new Date().toTimeString());
+}, 1000);
+
 const DEBUG = Deno.env.get("DEV");
 const OPENAI_KEY = Deno.env.get("OPENAI_KEY");
 
@@ -426,11 +430,7 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
     }
   });
 
-  try {
-    await firstWindow.show('./dist/index.html');
-
-    // TODO: load macros from macros folder & register each as deno macro with window.ga.addMacro wrapped into defaultDenoMacro
-
+  const openNow = async () => {
     await firstWindow.script(`
 async function waitForIt(selector) {
   while (true) {
@@ -467,14 +467,39 @@ ea.scrollToContent();
 }
 
 doIt();
-      `)
+      `);
 
+  }
+
+  try {
+    await firstWindow.show('./dist/index.html');
+
+    // TODO: load macros from macros folder & register each as deno macro with window.ga.addMacro wrapped into defaultDenoMacro
+    await openNow();
+    // TODO:
+    // -- saving elements of each frame into separate git-like storage object represented by json diff plus base excalidraw snapshot
+    // -- those elements outside of any frame - save them into "now" frame
+    // -- when frame includes other frames inside of it, only save its frame element but not nested elements (transclusion)
+    // -- also when saving "now" frame save all opened frames positions but not their nested elements
+    // TODO:
+    // -- by default should open INDEX frame with listing and comments of others auto uploaded unless already present
+    // -- (listen by frame with name but not loaded)
+    // when pressing open on a frame which has a name - it should not invoke opening window because it already has name - also will simplify openNow
+    // TODO: 
+    // -- use special symbol (option+O) like ø543c-321 inside of any string to reference links to other text elements by beginning of their ids
+    // -- in this case macros can compute full content of text element like save macro can get full file from its functions individually editable
+    // -- and bash macro can execute command with given parameters
     setInterval(() => {
       console.log("firstWindow isShown", firstWindow.isShown);
       if (!firstWindow.isShown) {
-        // firstWindow.clean();
-        firstWindow.close();
-        firstWindow.show('./dist/index.html');
+        try {
+          // firstWindow.clean();
+          firstWindow.close();
+          firstWindow.show('./dist/index.html');
+          openNow();
+        } catch (err) {
+          console.error("reopen", err);
+        }
       }
     }, 5000);
 
@@ -484,7 +509,6 @@ doIt();
         firstWindow.close();
       }
     );
-
   } catch (err) {
     console.error('err', err);
   }
@@ -516,6 +540,7 @@ doIt();
 
       const fileIds = [...new Set(els.filter(function(it) { return it.type === 'image'; }).map(function(it) { return it.fileId; }))];
 
+      // TODO: load macros from macros folder & register each as deno macro with window.ga.addMacro wrapped into defaultDenoMacro
       for (var i = 0; i < fileIds.length; i++) {
         var fileId = fileIds[i];
         let existingOne = false;
@@ -551,9 +576,11 @@ doIt();
 
       var sceneData = JSON.stringify({ elements: els.filter(it => it.name != 'now') }, null, 2);
       await Deno.writeTextFile(GALAXY_PATH + '/' + sceneName + '.json', sceneData);
+      console.log('auto save', sceneName);
     } catch (err) {
       console.error('saveScene', err);
     }
+
     mux = false;
   }
 
@@ -570,6 +597,6 @@ doIt();
     saveScene('now')
       .catch(console.error);
   }, 60 * 1000);
-
+  // TODO: show contextual notes in bottom right
   await WebUI.wait();
 })();

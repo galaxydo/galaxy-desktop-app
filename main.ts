@@ -3,12 +3,15 @@ import { dynamicImport, importString } from './dynamic-import/mod.ts';
 import { encodeHex } from "https://deno.land/std@0.202.0/encoding/hex.ts";
 import { decodeBase64, encodeBase64 } from "https://deno.land/std@0.206.0/encoding/base64.ts";
 
+import { generateText, openai } from "npm:modelfusion";
+
 setInterval(() => {
   console.log(new Date().toTimeString());
-}, 1000);
+}, 60 * 1000);
 
 const DEBUG = Deno.env.get("DEV");
 const OPENAI_KEY = Deno.env.get("OPENAI_KEY");
+const GOOGLE_KEY = Deno.env.get("GOOGLE_KEY");
 
 const firstWindow = new WebUI({
   'clearCache': DEBUG ? true : false,
@@ -145,6 +148,28 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
     }
   }
   return files;
+}
+
+async function registerMacrosAsync(macrosDir: string): Promise<Map<string, string>> {
+  const registeredMacros = new Map<string, string>();
+  for await (const entry of Deno.readDir(macrosDir)) {
+    if (entry.isFile && entry.name.endsWith('.ts')) {
+      const scriptContent = await Deno.readTextFile(`${macrosDir}/${entry.name}`);
+      console.log(`Registering macro: ${entry.name}`, scriptContent);
+      registeredMacros.set(entry.name, scriptContent);
+      try {
+        const dit = `${JSON.stringify(scriptContent)}`;
+        // console.log('dit', dit);
+        const cit = `return window.ga.defaultDenoMacro({ "type": "text", "text": ${dit} })`;
+        // console.log('cit', cit)
+        const bit = await firstWindow.script(cit);
+        console.log('bit', bit);
+      } catch (err) {
+        console.error('register macro error', err);
+      }
+    }
+  }
+  return registeredMacros;
 }
 
 // Main Execution
@@ -309,11 +334,24 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
     async function nov16() {
       try {
         let rawCode = e.arg.string(0);
-        // console.log('rawCode ', rawCode);
+        console.log('rawCode ', rawCode);
         const input = e.arg.string(1);
-        // console.log('input ', input);
+        console.log('input ', input);
         const taskId = e.arg.string(2);
         console.log('taskId ', taskId);
+        let output = JSON.stringify({});
+        try {
+          output = e.arg.string(3);
+        } catch (e) {
+          console.error('ignore', e);
+        }
+        console.log('output ', output);
+        let label = '';
+        try {
+          label = e.arg.string(4);
+        } catch (e) {
+          console.error('ignore label', e);
+        }
         // Extract function details from the rawCode
         const functionNameMatch = rawCode.match(/(async\s*)?function (\w+)/);
         if (!functionNameMatch) {
@@ -334,7 +372,9 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
             dynamicImport: (moduleName) => dynamicImport(moduleName, {
               force: true,
             }),
+            label: label,
             input: JSON.parse(input),
+            output: JSON.parse(output),
             firstWindow,
             galaxyPath: GALAXY_PATH,
             modules: {},
@@ -342,6 +382,7 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
             encodeBase64,
             apiKey: OPENAI_KEY,
             encodeHex,
+            googleKey: GOOGLE_KEY,
           }
         });
 
@@ -359,7 +400,7 @@ async function loadFilesAsync(pathList: string[]): Promise<MemoryFiles> {
           .replace(/`/g, '\\`')   // Escape backticks
           .replace(/\$/g, '\\$'); // Escape dollar signs (for template literals)
 
-        await firstWindow.run(`return window.webuiCallbacks["${taskId}"]('${serializedResponse}')`);
+        await firstWindow.script(`return window.webuiCallbacks["${taskId}"]('${serializedResponse}')`);
       } catch (err) {
         console.error('executeDeno error', err);
         firstWindow.run(`ea.setToast({ message: "${err.toString()}" })`);
@@ -475,7 +516,7 @@ doIt();
     await firstWindow.show('./dist/index.html');
 
     // TODO: load macros from macros folder & register each as deno macro with window.ga.addMacro wrapped into defaultDenoMacro
-    await openNow();
+    // await openNow();
     // TODO:
     // -- saving elements of each frame into separate git-like storage object represented by json diff plus base excalidraw snapshot
     // -- those elements outside of any frame - save them into "now" frame
@@ -496,7 +537,7 @@ doIt();
           // firstWindow.clean();
           firstWindow.close();
           firstWindow.show('./dist/index.html');
-          openNow();
+          // openNow();
         } catch (err) {
           console.error("reopen", err);
         }
@@ -509,6 +550,18 @@ doIt();
         firstWindow.close();
       }
     );
+
+    // TODO: strip away all comments in macros files
+    // TODO: strip away everything before function definition - there can be unit test running
+    while (true) {
+      const ready = await firstWindow.script(`return window.ga != null;`);
+      if (ready) {
+        break;
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      registerMacrosAsync(`./macros`);
+    }
   } catch (err) {
     console.error('err', err);
   }

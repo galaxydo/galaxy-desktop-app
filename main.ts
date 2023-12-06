@@ -12,6 +12,7 @@ setInterval(() => {
 const DEBUG = Deno.env.get("DEV");
 const OPENAI_KEY = Deno.env.get("OPENAI_KEY");
 const GOOGLE_KEY = Deno.env.get("GOOGLE_KEY");
+const GALAXY_PATH = `${Deno.env.get("HOME")}/.galaxy`;
 
 const firstWindow = new WebUI({
   'clearCache': DEBUG ? true : false,
@@ -26,7 +27,7 @@ const firstWindow = new WebUI({
 
 firstWindow.setProfile('', '');
 
-const GALAXY_PATH = `${Deno.env.get("HOME")}/.galaxy`;
+
 const KV_PATH = `${GALAXY_PATH}/meta.json`;
 
 // --- Directory and Metadata functions ---
